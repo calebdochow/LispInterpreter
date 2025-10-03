@@ -1,0 +1,8 @@
+Lisp Interpreter
+C code for sprints 1-3 of Yessicks Lisp (Yisp) Interpreter
+
+To Run: 
+make clean
+make run
+
+Limitations: 
