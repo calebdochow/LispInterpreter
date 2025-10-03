@@ -27,7 +27,7 @@ TokenStream tokenize(const char* input);
 void free_tokens(TokenStream *ts);
 sExpr* parse_sexpr(TokenStream *ts);
 
-// Constructors
+// Constructors 
 sExpr* create_int(long value);
 sExpr* create_double(double value);
 sExpr* create_string(const char *value);
