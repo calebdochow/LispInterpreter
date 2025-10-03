@@ -148,12 +148,6 @@ void free_sExpr(sExpr *e){
 
 //Tokenizer
 
-typedef struct {
-    char **items;
-    int count;
-    int pos;
-} TokenStream;
-
 TokenStream tokenize(const char* input){
     TokenStream ts;
     ts.count = 0;
@@ -434,7 +428,7 @@ sExpr* not_sExpr(sExpr *a) {
     return (sExpr_to_bool(a)) ? NIL : TRUE;
 }
 
-/*
+
 int main(int argc, char *argv[]) {
     FILE *input = NULL;
 
@@ -493,7 +487,7 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-*/
+
 
 
 

@@ -1,35 +1,39 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g
 
-# Repl
-REPL_OBJS = src/Yisp.o
+#Object files
+COMMON_OBJS = src/sexpr.o
+
+#Repl
+REPL_OBJS = src/Yisp.o $(COMMON_OBJS)
 REPL_TARGET = repl
 
-# Test
-TEST_OBJS = src/test.o
+#Test
+TEST_OBJS = src/test.o $(COMMON_OBJS)
 TEST_TARGET = testcases
 
 all: $(REPL_TARGET) $(TEST_TARGET)
 
-# Build executables
+#repl
 $(REPL_TARGET): $(REPL_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
+#test environment
 $(TEST_TARGET): $(TEST_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
-# Compile object files
+#compile 
 src/%.o: src/%.c src/%.h
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $<
 
 src/%.o: src/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $<
 
-# Run
-repl: $(REPL_TARGET)
+#make repl or make tests
+run-repl: $(REPL_TARGET)
 	./$(REPL_TARGET)
 
-test: $(TEST_TARGET)
+run-test: $(TEST_TARGET)
 	./$(TEST_TARGET)
 
 clean:
