@@ -6,6 +6,39 @@
 
 sExpr *NIL;
 sExpr *TRUE;
+sExpr *global_env = NULL;
+
+sExpr* create_env(){
+    return cons(NIL, cons(NIL, NIL));
+}
+
+sExpr* set(sExpr* symbol, sExpr* value){
+    sExpr* symbols = car(global_env);
+    sExpr* values = car(cdr(global_env));
+    
+    sExpr* new_symbols = cons(symbol, symbols);
+    sExpr* new_values = cons(value, values);
+
+    global_env = cons(new_symbols, cons(new_values, NIL));
+    
+    return value;
+}
+
+sExpr* lookup(sExpr* symbol){
+    sExpr* symbols = car(global_env);
+    sExpr* values = car(cdr(global_env));
+    return get_symbol(symbol, symbols, values);
+}
+
+sExpr* get_symbol(sExpr* target, sExpr* symbol, sExpr* value){
+    if(isnil(symbol)) return cons(create_symbol("undefined"), cons(target, NIL));
+
+    if(sExpr_to_bool(eq(car(symbol), target))){
+        return car(value);
+    }
+
+    return get_symbol(target, cdr(symbol), cdr(value));
+}
 
 //Constructors
 sExpr* create_int(long value) {
@@ -52,12 +85,9 @@ sExpr* cdr(sExpr *e){
     return (e->type == TYPE_CONS) ? e->value.cons.cdr : NIL;
 }
 
-int isnil(sExpr *e)    { return (e->type == TYPE_NIL); }
-
+int isnil(sExpr *e) { return (e->type == TYPE_NIL); }
 int issymbol(sExpr *e) { return (e->type == TYPE_SYMBOL); }
-
 int isnumber(sExpr *e) { return (e->type == TYPE_INT || e->type == TYPE_DOUBLE); }
-
 int isstring(sExpr *e) { return (e->type == TYPE_STRING); }
 
 int islist(sExpr *e) {
@@ -425,9 +455,70 @@ sExpr* eq(sExpr *a, sExpr *b) {
 }
 
 sExpr* not_sExpr(sExpr *a) {
-    return (sExpr_to_bool(a)) ? NIL : TRUE;
+    return (a == NIL) ? TRUE : NIL;
 }
 
+sExpr* eval(sExpr *expr) {
+    if (isnil(expr)) return NIL;
+
+    if (isnumber(expr) || isstring(expr)) {
+        return expr;
+    }
+
+    if(issymbol(expr)) {
+        return lookup(expr);
+    }
+
+    // --- Lists (function calls) ---
+    sExpr *fn = car(expr);
+    sExpr *args = cdr(expr);
+
+    if (!issymbol(fn)) {
+        printf("Invalid function call\n");
+        return NIL;
+    }
+
+    const char *sym = fn->value.symbol;
+
+    if (strcmp(sym, "quote") == 0)
+        return car(args);
+
+    if (strcmp(sym, "set") == 0) {
+        sExpr *var = car(args);
+        sExpr *val = eval(car(cdr(args)));
+
+        return set(var, val);
+    }
+
+    // --- Arithmetic ---
+    if (strcmp(sym, "+") == 0)
+        return add(eval(car(args)), eval(car(cdr(args))));
+    if (strcmp(sym, "-") == 0)
+        return sub(eval(car(args)), eval(car(cdr(args))));
+    if (strcmp(sym, "*") == 0)
+        return mul(eval(car(args)), eval(car(cdr(args))));
+    if (strcmp(sym, "/") == 0)
+        return divide(eval(car(args)), eval(car(cdr(args))));
+    if (strcmp(sym, "%") == 0)
+        return mod(eval(car(args)), eval(car(cdr(args))));
+
+    // --- Comparisons ---
+    if (strcmp(sym, "<") == 0)
+        return lt(eval(car(args)), eval(car(cdr(args))));
+    if (strcmp(sym, ">") == 0)
+        return gt(eval(car(args)), eval(car(cdr(args))));
+    if (strcmp(sym, "<=") == 0)
+        return lte(eval(car(args)), eval(car(cdr(args))));
+    if (strcmp(sym, ">=") == 0)
+        return gte(eval(car(args)), eval(car(cdr(args))));
+    if (strcmp(sym, "eq") == 0)
+        return eq(eval(car(args)), eval(car(cdr(args))));
+    if (strcmp(sym, "not") == 0)
+        return not_sExpr(eval(car(args)));
+
+    printf("Unknown function: %s\n", sym);
+    return NIL;
+}
 
 int main(int argc, char *argv[]) {
     FILE *input = NULL;
@@ -439,6 +530,8 @@ int main(int argc, char *argv[]) {
     TRUE = malloc(sizeof(sExpr));
     TRUE->type = TYPE_SYMBOL;
     TRUE->value.symbol = strdup("t");
+
+    global_env = create_env();
 
     // --- Open input ---
     if (argc == 1) {
@@ -467,13 +560,15 @@ int main(int argc, char *argv[]) {
         // Parse
         sExpr *expr = parse_sexpr(&ts);
 
+        sExpr *result = eval(expr);
+
         // Print the expression
-        print_sExpr(expr);
+        print_sExpr(result);
         printf("\n");
 
         // Free tokens and expression
-        free_tokens(&ts);
-        free_sExpr(expr);
+        //free_tokens(&ts);
+        //free_sExpr(expr);
 
         if (input == stdin) printf("> ");
     }

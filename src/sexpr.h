@@ -23,6 +23,11 @@ typedef struct {
     int pos;
 } TokenStream;
 
+sExpr* create_env();
+sExpr* get_symbol(sExpr* target, sExpr* symbol, sExpr* value);
+sExpr* lookup(sExpr* symbol);
+sExpr* set(sExpr* symbol, sExpr* value);
+
 TokenStream tokenize(const char* input);
 void free_tokens(TokenStream *ts);
 sExpr* parse_sexpr(TokenStream *ts);
@@ -63,6 +68,5 @@ sExpr* lte(sExpr *a, sExpr *b);
 sExpr* gte(sExpr *a, sExpr *b);
 sExpr* eq(sExpr *a, sExpr *b);
 sExpr* not_sExpr(sExpr *a);
-
 
 #endif
