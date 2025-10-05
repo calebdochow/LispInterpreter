@@ -511,11 +511,53 @@ sExpr* eval(sExpr *expr) {
         return lte(eval(car(args)), eval(car(cdr(args))));
     if (strcmp(sym, ">=") == 0)
         return gte(eval(car(args)), eval(car(cdr(args))));
-    if (strcmp(sym, "eq") == 0)
+    if (strcmp(sym, "=") == 0)
         return eq(eval(car(args)), eval(car(cdr(args))));
     if (strcmp(sym, "not") == 0)
         return not_sExpr(eval(car(args)));
 
+
+    // --Short Circuiting---
+    if (strcmp(sym, "and") == 0) {
+        sExpr* a = car(args);
+        sExpr* b = car(cdr(args));
+
+        if(isnil(eval(a))) return NIL;
+        return eval(b);
+    }
+
+    if(strcmp(sym, "or") == 0) {
+        sExpr* a = car(args);
+        sExpr* b = car(cdr(args));
+
+        if(!isnil(eval(a))) return TRUE;
+        return eval(b);
+    }
+
+    if(strcmp(sym, "if") == 0) {
+        sExpr* cond = car(args);
+        sExpr* then_branch = car(cdr(args));
+        sExpr* else_branch = car(cdr(cdr(args)));
+
+        if(!isnil(eval(cond))) return eval(then_branch);
+        return eval(else_branch);
+    }
+
+    if(strcmp(sym, "cond") == 0) {
+        sExpr* pair = args;
+        while(!isnil(pair))
+        {
+            sExpr* test_expr = car(car(pair));
+            sExpr* result_expr = car(cdr(car(pair)));
+
+            sExpr* test_val = eval(test_expr);
+            if(!isnil(test_val)) return eval(result_expr);
+
+            pair = cdr(pair);
+        }
+        return NIL;
+    }
+        
     printf("Unknown function: %s\n", sym);
     return NIL;
 }
