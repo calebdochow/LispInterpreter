@@ -40,6 +40,32 @@ sExpr* get_symbol(sExpr* target, sExpr* symbol, sExpr* value){
     return get_symbol(target, cdr(symbol), cdr(value));
 }
 
+sExpr* push_env(sExpr* params, sExpr* args){
+    sExpr* new_env = cons(params, cons(args, NIL));
+    global_env = cons(new_env, cons(global_env, NIL));
+    return new_env;
+}
+
+void pop_env(){
+    if(!isnil(global_env)){
+        sExpr* old_env = car(cdr(global_env));
+        global_env = old_env;
+    }
+}
+
+sExpr* lookup_stack(sExpr* symbol){
+    sExpr* env = global_env;
+    while(!isnil(env)){
+        sExpr* frame = car(env);
+        sExpr* val = get_symbol(symbol, car(frame), car(cdr(frame)));
+        if(!issymbol(val) || strcmp(val->value.symbol, "undefined") != 0){
+            return val;
+        }
+        env = cdr(env);
+    }
+    return create_symbol("undefined");
+}
+
 //Constructors
 sExpr* create_int(long value) {
     sExpr *e = (sExpr *)malloc(sizeof(sExpr));
@@ -466,7 +492,11 @@ sExpr* eval(sExpr *expr) {
     }
 
     if(issymbol(expr)) {
-        return lookup(expr);
+        sExpr* val = lookup_stack(expr);
+        if(!issymbol(val) || strcmp(val->value.symbol, "undefined") != 0){
+            return val;
+        }
+        return NIL;
     }
 
     // --- Lists (function calls) ---
@@ -556,6 +586,42 @@ sExpr* eval(sExpr *expr) {
             pair = cdr(pair);
         }
         return NIL;
+    }
+
+    if(strcmp(sym, "define") == 0){
+        sExpr* name = car(args);
+        sExpr* lambda_expr = car(cdr(args));
+        return set(name, lambda_expr);
+    }
+
+    sExpr* val = lookup(fn);
+    if(!isnil(val) && issymbol(car(val)) && strcmp(car(val)->value.symbol, "lambda") == 0){
+        sExpr* arg_names = car(cdr(val));
+        sExpr* body = car(cdr(cdr(val)));
+
+        sExpr* evaled_args = NIL;
+        sExpr* tail = NIL;
+        sExpr* cur = args;
+
+        while(!isnil(cur)){
+            sExpr* a = eval(car(cur));
+            if(isnil(evaled_args)){
+                evaled_args = cons(a, NIL);
+                tail = evaled_args;
+            }else{
+                tail->value.cons.cdr = cons(a, NIL);
+                tail = tail->value.cons.cdr;
+            }
+            cur = cdr(cur);
+        }
+
+        push_env(arg_names, evaled_args);
+
+        sExpr* result = eval(body);
+
+        pop_env();
+
+        return result;
     }
         
     printf("Unknown function: %s\n", sym);
