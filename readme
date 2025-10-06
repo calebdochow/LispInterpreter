@@ -3,6 +3,7 @@ C code for sprints 1-8 of Yessicks Lisp (Yisp) Interpreter
 
 To Run: 
 make clean
-make run
+make test (for test cases)
+make run (for repl)
 
-Limitations: 
+Check Documentation.txt for limitaions and other notes on the program

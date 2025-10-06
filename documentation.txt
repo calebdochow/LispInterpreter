@@ -1,6 +1,13 @@
-This implementation of an S-Expression parser and evaluator has a few known limitations and design choices that may differ from standard Lisp implementations. 
-Quoting is supported only for simple single-quote syntax (e.g., '(a b c))
-Some design choices were made to simplify memory management and type handling. There are cases of memory leakage
-Arithmetic functions return NIL for invalid operations rather than raising errors, and the equality comparison for lists performs a comparison rather than pointer equality. 
-Additionally, only basic numeric types (int and double) are supported, and string handling is rough
-Future improvements could include proper error handling, support for additional Lisp types, and more advanced evaluation features.
+Limitations:
+
+Only NIL is false; all other values are considered true inconsistently.
+
+Only integers, doubles, strings, symbols, NIL, and cons cells supported.
+
+Arithmetic operations fail if operands are not numbers.
+
+Operations solely use 2 arguemnts, requires nesting for larger computations
+
+and/or short-circuit but truthiness rules differ from standard Lisp.
+
+Errors return NIL rather tahn crashing the program
