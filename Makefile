@@ -1,40 +1,24 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g
+CFLAGS = -I src -Wall -Wextra -g
 
-#Object files
-COMMON_OBJS = src/sexpr.o
+SOURCE = src/Yisp.c
+HEADER = src/sexpr.h
 
-#Repl
-REPL_OBJS = src/Yisp.o $(COMMON_OBJS)
-REPL_TARGET = repl
+# --- Default target ---
+all: yisp
 
-#Test
-TEST_OBJS = src/test.o $(COMMON_OBJS)
-TEST_TARGET = testcases
+# --- Build interpreter ---
+yisp: src/main.c $(SOURCE) $(HEADER)
+	$(CC) $(CFLAGS) -o yisp src/main.c $(SOURCE)
 
-all: $(REPL_TARGET) $(TEST_TARGET)
+run: yisp
+	./yisp
 
-#repl
-$(REPL_TARGET): $(REPL_OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ -lm
+# --- Build & run tests ---
+test: src/test.c $(SOURCE) $(HEADER)
+	$(CC) $(CFLAGS) -o test src/test.c $(SOURCE)
+	./test
 
-#test environment
-$(TEST_TARGET): $(TEST_OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ -lm
-
-#compile 
-src/%.o: src/%.c src/%.h
-	$(CC) $(CFLAGS) -c $<
-
-src/%.o: src/%.c
-	$(CC) $(CFLAGS) -c $<
-
-#make repl or make tests
-run-repl: $(REPL_TARGET)
-	./$(REPL_TARGET)
-
-run-test: $(TEST_TARGET)
-	./$(TEST_TARGET)
-
+# --- Cleanup ---
 clean:
-	rm -f src/*.o $(REPL_TARGET) $(TEST_TARGET)
+	rm -f yisp test *.o

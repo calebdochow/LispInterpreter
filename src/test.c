@@ -321,6 +321,8 @@ int main() {
     TRUE->type = TYPE_SYMBOL;
     TRUE->value.symbol = strdup("t");
 
+    global_env = create_env();
+
     test_constructors();
     test_cons_and_list();
     test_arithmetic();

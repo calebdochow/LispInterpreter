@@ -17,18 +17,23 @@ typedef struct sExpr {
     } value;
 } sExpr;
 
+extern sExpr *NIL;
+extern sExpr *TRUE;
+extern sExpr *global_env;
+
 typedef struct {
     char **items;
     int count;
     int pos;
 } TokenStream;
 
-
-
 sExpr* create_env();
 sExpr* get_symbol(sExpr* target, sExpr* symbol, sExpr* value);
 sExpr* lookup(sExpr* symbol);
 sExpr* set(sExpr* symbol, sExpr* value);
+sExpr* push_env(sExpr* params, sExpr* args);
+void pop_env();
+sExpr* lookup_stack(sExpr* symbol);
 
 TokenStream tokenize(const char* input);
 void free_tokens(TokenStream *ts);
@@ -70,5 +75,7 @@ sExpr* lte(sExpr *a, sExpr *b);
 sExpr* gte(sExpr *a, sExpr *b);
 sExpr* eq(sExpr *a, sExpr *b);
 sExpr* not_sExpr(sExpr *a);
+
+sExpr* eval(sExpr *expr);
 
 #endif

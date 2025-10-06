@@ -9,48 +9,71 @@ sExpr *TRUE;
 sExpr *global_env = NULL;
 
 sExpr* create_env(){
-    return cons(NIL, cons(NIL, NIL));
+    sExpr* frame = cons(NIL, cons(NIL, NIL));
+    return cons(frame, NIL);
 }
 
 sExpr* set(sExpr* symbol, sExpr* value){
-    sExpr* symbols = car(global_env);
-    sExpr* values = car(cdr(global_env));
-    
-    sExpr* new_symbols = cons(symbol, symbols);
-    sExpr* new_values = cons(value, values);
+    if (isnil(global_env)) { // Creates fresh env
+        global_env = create_env();
+    }
 
-    global_env = cons(new_symbols, cons(new_values, NIL));
+    // grabs last frame
+    sExpr* env_iter = global_env;
+    while (!isnil(cdr(env_iter))) env_iter = cdr(env_iter);
+    sExpr* frame = car(env_iter); // gloval frame
+
+    sExpr* symbols = car(frame);
+    sExpr* values = car(cdr(frame));
+
+    // Try to update existing binding
+    sExpr* sym_it = symbols;
+    sExpr* val_it = values;
+    while (!isnil(sym_it) && !isnil(val_it)) {
+        if (sExpr_to_bool(eq(car(sym_it), symbol))) {
+            // update the corresponding value node
+            val_it->value.cons.car = value;
+            return value;
+        }
+        sym_it = cdr(sym_it);
+        val_it = cdr(val_it);
+    }
+
     
+    frame->value.cons.car = cons(symbol, symbols);
+    sExpr* values_cons = cdr(frame); 
+    values_cons->value.cons.car = cons(value, values);
+
     return value;
 }
 
 sExpr* lookup(sExpr* symbol){
-    sExpr* symbols = car(global_env);
-    sExpr* values = car(cdr(global_env));
-    return get_symbol(symbol, symbols, values);
+    return lookup_stack(symbol);
 }
 
 sExpr* get_symbol(sExpr* target, sExpr* symbol, sExpr* value){
-    if(isnil(symbol)) return cons(create_symbol("undefined"), cons(target, NIL));
-
-    if(sExpr_to_bool(eq(car(symbol), target))){
-        return car(value);
+    while (!isnil(symbol) && !isnil(value)) {
+        if (sExpr_to_bool(eq(car(symbol), target))) {
+            return car(value);
+        }
+        symbol = cdr(symbol);
+        value = cdr(value);
     }
-
-    return get_symbol(target, cdr(symbol), cdr(value));
+    return create_symbol("undefined");
 }
 
 sExpr* push_env(sExpr* params, sExpr* args){
-    sExpr* new_env = cons(params, cons(args, NIL));
-    global_env = cons(new_env, cons(global_env, NIL));
-    return new_env;
+    sExpr* new_frame = cons(params, cons(args, NIL));
+    global_env = cons(new_frame, global_env);
+    return new_frame;
 }
 
 void pop_env(){
-    if(!isnil(global_env)){
-        sExpr* old_env = car(cdr(global_env));
-        global_env = old_env;
+    if (isnil(global_env)) return;
+    if (isnil(cdr(global_env))) {
+        return;
     }
+    global_env = cdr(global_env);
 }
 
 sExpr* lookup_stack(sExpr* symbol){
@@ -58,7 +81,7 @@ sExpr* lookup_stack(sExpr* symbol){
     while(!isnil(env)){
         sExpr* frame = car(env);
         sExpr* val = get_symbol(symbol, car(frame), car(cdr(frame)));
-        if(!issymbol(val) || strcmp(val->value.symbol, "undefined") != 0){
+        if(!issymbol(val) || strcmp(val->value.symbol, "undefined") == 0){
             return val;
         }
         env = cdr(env);
@@ -312,11 +335,11 @@ sExpr* parse_list(TokenStream *ts){
 
 sExpr *parse_sexpr(TokenStream *ts) {
     const char *tok = peek(ts);
-    if (!tok) return NIL; // end of input, return safe NIL
+    if (!tok) return NIL; // end of input
 
     // Handle list
     if (strcmp(tok, "(") == 0) {
-        next(ts); // consume '('
+        next(ts); // consume
         sExpr *head = NIL;
         sExpr *tail = NIL;
 
@@ -352,6 +375,7 @@ sExpr *parse_sexpr(TokenStream *ts) {
 
     // Atom
     next(ts); // consume token
+
     // Integer
     char *endptr;
     long val = strtol(tok, &endptr, 10);
@@ -499,198 +523,106 @@ sExpr* eval(sExpr *expr) {
         return NIL;
     }
 
-    // --- Lists (function calls) ---
     sExpr *fn = car(expr);
     sExpr *args = cdr(expr);
 
-    if (!issymbol(fn)) {
+    sExpr* lambda_expr = NIL;
+    const char* sym = NULL;
+
+    if (issymbol(fn)) {
+        sym = fn->value.symbol;
+        lambda_expr = lookup_stack(fn);
+    }else if (fn->type == TYPE_CONS && issymbol(car(fn)) && strcmp(car(fn)->value.symbol, "lambda") == 0){
+        lambda_expr = fn;
+    }else{
         printf("Invalid function call\n");
         return NIL;
     }
 
-    const char *sym = fn->value.symbol;
 
-    if (strcmp(sym, "quote") == 0)
-        return car(args);
-
-    if (strcmp(sym, "set") == 0) {
-        sExpr *var = car(args);
-        sExpr *val = eval(car(cdr(args)));
-
-        return set(var, val);
-    }
-
-    // --- Arithmetic ---
-    if (strcmp(sym, "+") == 0)
-        return add(eval(car(args)), eval(car(cdr(args))));
-    if (strcmp(sym, "-") == 0)
-        return sub(eval(car(args)), eval(car(cdr(args))));
-    if (strcmp(sym, "*") == 0)
-        return mul(eval(car(args)), eval(car(cdr(args))));
-    if (strcmp(sym, "/") == 0)
-        return divide(eval(car(args)), eval(car(cdr(args))));
-    if (strcmp(sym, "%") == 0)
-        return mod(eval(car(args)), eval(car(cdr(args))));
-
-    // --- Comparisons ---
-    if (strcmp(sym, "<") == 0)
-        return lt(eval(car(args)), eval(car(cdr(args))));
-    if (strcmp(sym, ">") == 0)
-        return gt(eval(car(args)), eval(car(cdr(args))));
-    if (strcmp(sym, "<=") == 0)
-        return lte(eval(car(args)), eval(car(cdr(args))));
-    if (strcmp(sym, ">=") == 0)
-        return gte(eval(car(args)), eval(car(cdr(args))));
-    if (strcmp(sym, "=") == 0)
-        return eq(eval(car(args)), eval(car(cdr(args))));
-    if (strcmp(sym, "not") == 0)
-        return not_sExpr(eval(car(args)));
-
-
-    // --Short Circuiting---
-    if (strcmp(sym, "and") == 0) {
-        sExpr* a = car(args);
-        sExpr* b = car(cdr(args));
-
-        if(isnil(eval(a))) return NIL;
-        return eval(b);
-    }
-
-    if(strcmp(sym, "or") == 0) {
-        sExpr* a = car(args);
-        sExpr* b = car(cdr(args));
-
-        if(!isnil(eval(a))) return TRUE;
-        return eval(b);
-    }
-
-    if(strcmp(sym, "if") == 0) {
-        sExpr* cond = car(args);
-        sExpr* then_branch = car(cdr(args));
-        sExpr* else_branch = car(cdr(cdr(args)));
-
-        if(!isnil(eval(cond))) return eval(then_branch);
-        return eval(else_branch);
-    }
-
-    if(strcmp(sym, "cond") == 0) {
-        sExpr* pair = args;
-        while(!isnil(pair))
-        {
-            sExpr* test_expr = car(car(pair));
-            sExpr* result_expr = car(cdr(car(pair)));
-
-            sExpr* test_val = eval(test_expr);
-            if(!isnil(test_val)) return eval(result_expr);
-
-            pair = cdr(pair);
+    if (sym != NULL) {
+        if (strcmp(sym, "quote") == 0) return car(args);
+        if (strcmp(sym, "set") == 0) {
+            sExpr *var = car(args);
+            sExpr *val = eval(car(cdr(args)));
+            return set(var, val);
         }
-        return NIL;
+        if (strcmp(sym, "define") == 0) {
+            sExpr* name = car(args);
+            sExpr* val_expr = car(cdr(args));
+            return set(name, val_expr);
+        }
+        if (strcmp(sym, "+") == 0) return add(eval(car(args)), eval(car(cdr(args))));
+        if (strcmp(sym, "-") == 0) return sub(eval(car(args)), eval(car(cdr(args))));
+        if (strcmp(sym, "*") == 0) return mul(eval(car(args)), eval(car(cdr(args))));
+        if (strcmp(sym, "/") == 0) return divide(eval(car(args)), eval(car(cdr(args))));
+        if (strcmp(sym, "%") == 0) return mod(eval(car(args)), eval(car(cdr(args))));
+        if (strcmp(sym, "<") == 0) return lt(eval(car(args)), eval(car(cdr(args))));
+        if (strcmp(sym, ">") == 0) return gt(eval(car(args)), eval(car(cdr(args))));
+        if (strcmp(sym, "<=") == 0) return lte(eval(car(args)), eval(car(cdr(args))));
+        if (strcmp(sym, ">=") == 0) return gte(eval(car(args)), eval(car(cdr(args))));
+        if (strcmp(sym, "=") == 0) return eq(eval(car(args)), eval(car(cdr(args))));
+        if (strcmp(sym, "not") == 0) return not_sExpr(eval(car(args)));
+        if (strcmp(sym, "and") == 0) {
+            sExpr* a = car(args);
+            sExpr* b = car(cdr(args));
+            if (isnil(eval(a))) return NIL;
+            return eval(b);
+        }
+        if (strcmp(sym, "or") == 0) {
+            sExpr* a = car(args);
+            sExpr* b = car(cdr(args));
+            if (!isnil(eval(a))) return TRUE;
+            return eval(b);
+        }
+        if (strcmp(sym, "if") == 0) {
+            sExpr* cond = car(args);
+            sExpr* then_branch = car(cdr(args));
+            sExpr* else_branch = car(cdr(cdr(args)));
+            if (!isnil(eval(cond))) return eval(then_branch);
+            return eval(else_branch);
+        }
+        if (strcmp(sym, "cond") == 0) {
+            sExpr* pair = args;
+            while (!isnil(pair)) {
+                sExpr* test_expr = car(car(pair));
+                sExpr* result_expr = car(cdr(car(pair)));
+                if (!isnil(eval(test_expr))) return eval(result_expr);
+                pair = cdr(pair);
+            }
+            return NIL;
+        }
     }
 
-    if(strcmp(sym, "define") == 0){
-        sExpr* name = car(args);
-        sExpr* lambda_expr = car(cdr(args));
-        return set(name, lambda_expr);
-    }
+     if (!isnil(lambda_expr) && issymbol(car(lambda_expr)) &&
+        strcmp(car(lambda_expr)->value.symbol, "lambda") == 0) {
 
-    sExpr* val = lookup(fn);
-    if(!isnil(val) && issymbol(car(val)) && strcmp(car(val)->value.symbol, "lambda") == 0){
-        sExpr* arg_names = car(cdr(val));
-        sExpr* body = car(cdr(cdr(val)));
+        sExpr* arg_names = car(cdr(lambda_expr));
+        sExpr* body = car(cdr(cdr(lambda_expr)));
 
+        // Evaluate arguments
         sExpr* evaled_args = NIL;
         sExpr* tail = NIL;
         sExpr* cur = args;
-
-        while(!isnil(cur)){
+        while (!isnil(cur)) {
             sExpr* a = eval(car(cur));
-            if(isnil(evaled_args)){
+            if (isnil(evaled_args)) {
                 evaled_args = cons(a, NIL);
                 tail = evaled_args;
-            }else{
+            } else {
                 tail->value.cons.cdr = cons(a, NIL);
                 tail = tail->value.cons.cdr;
             }
             cur = cdr(cur);
         }
 
+        // Push environment, evaluate body, pop environment
         push_env(arg_names, evaled_args);
-
         sExpr* result = eval(body);
-
         pop_env();
-
         return result;
     }
-        
-    printf("Unknown function: %s\n", sym);
+
+    printf("Unknown function: %s\n", sym ? sym : "???");
     return NIL;
 }
-
-int main(int argc, char *argv[]) {
-    FILE *input = NULL;
-
-    // --- Initialize singletons ---
-    NIL = malloc(sizeof(sExpr));
-    NIL->type = TYPE_NIL;
-
-    TRUE = malloc(sizeof(sExpr));
-    TRUE->type = TYPE_SYMBOL;
-    TRUE->value.symbol = strdup("t");
-
-    global_env = create_env();
-
-    // --- Open input ---
-    if (argc == 1) {
-        printf("Reading from stdin. Enter S-Expressions (Ctrl+C to quit):\n> ");
-        input = stdin;
-    } 
-    else if (argc == 2) {
-        input = fopen(argv[1], "r");
-        if (!input) {
-            fprintf(stderr, "Bad file: %s\n", argv[1]);
-            return 1;
-        }
-    }
-
-    char buffer[1024];
-    while (fgets(buffer, sizeof(buffer), input)) {
-        buffer[strcspn(buffer, "\n")] = '\0';
-        if (strlen(buffer) == 0) {
-            if (input == stdin) printf("> ");
-            continue;
-        }
-
-        // Tokenize
-        TokenStream ts = tokenize(buffer);
-
-        // Parse
-        sExpr *expr = parse_sexpr(&ts);
-
-        sExpr *result = eval(expr);
-
-        // Print the expression
-        print_sExpr(result);
-        printf("\n");
-
-        // Free tokens and expression
-        //free_tokens(&ts);
-        //free_sExpr(expr);
-
-        if (input == stdin) printf("> ");
-    }
-
-    // --- Close file and cleanup ---
-    if (input != stdin) fclose(input);
-
-    free(TRUE->value.symbol);
-    free(TRUE);
-    free(NIL);
-
-    return 0;
-}
-
-
-
-
