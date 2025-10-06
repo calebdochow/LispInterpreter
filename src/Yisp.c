@@ -357,7 +357,6 @@ sExpr *parse_sexpr(TokenStream *ts) {
         }
 
         if (!tok) {
-            fprintf(stderr, "Parse error: missing closing parenthesis\n");
             return NIL; // unmatched '('
         }
 
@@ -393,7 +392,7 @@ sExpr *parse_sexpr(TokenStream *ts) {
 sExpr* add(sExpr *a, sExpr *b) {
     if ((a->type != TYPE_INT && a->type != TYPE_DOUBLE) ||
         (b->type != TYPE_INT && b->type != TYPE_DOUBLE)) {
-        return create_symbol("Not a number");
+        return NIL;
     }
 
     if (a->type == TYPE_DOUBLE || b->type == TYPE_DOUBLE) {
@@ -408,7 +407,7 @@ sExpr* add(sExpr *a, sExpr *b) {
 sExpr* sub(sExpr *a, sExpr *b) {
     if ((a->type != TYPE_INT && a->type != TYPE_DOUBLE) ||
         (b->type != TYPE_INT && b->type != TYPE_DOUBLE)) {
-        return create_symbol("Not a number");
+        return NIL;
     }
 
     if (a->type == TYPE_DOUBLE || b->type == TYPE_DOUBLE) {
@@ -423,7 +422,7 @@ sExpr* sub(sExpr *a, sExpr *b) {
 sExpr* mul(sExpr *a, sExpr *b) {
     if ((a->type != TYPE_INT && a->type != TYPE_DOUBLE) ||
         (b->type != TYPE_INT && b->type != TYPE_DOUBLE)) {
-        return create_symbol("Not a number");
+        return NIL;
     }
 
     if (a->type == TYPE_DOUBLE || b->type == TYPE_DOUBLE) {
@@ -438,25 +437,25 @@ sExpr* mul(sExpr *a, sExpr *b) {
 sExpr* divide(sExpr *a, sExpr *b) {
     if ((a->type != TYPE_INT && a->type != TYPE_DOUBLE) ||
         (b->type != TYPE_INT && b->type != TYPE_DOUBLE)) {
-        return create_symbol("Not a number");
+        return NIL;
     }
 
     double y = (b->type == TYPE_DOUBLE) ? b->value.dbl : b->value.integer;
-    if (y == 0) return create_symbol("DivisionByZero");
+    if (y == 0) return NIL;
 
     double x = (a->type == TYPE_DOUBLE) ? a->value.dbl : a->value.integer;
     return create_double(x / y);
 }
 
 sExpr* mod(sExpr *a, sExpr *b) {
-    if (a->type != TYPE_INT || b->type != TYPE_INT) return create_symbol("Not a number");
-    if (b->value.integer == 0) return create_symbol("DivisionByZero");
+    if (a->type != TYPE_INT || b->type != TYPE_INT) return NIL;
+    if (b->value.integer == 0) return NIL;
     return create_int(a->value.integer % b->value.integer);
 }
 
 sExpr* lt(sExpr *a, sExpr *b) {
     if ((a->type != TYPE_INT && a->type != TYPE_DOUBLE) ||
-        (b->type != TYPE_INT && b->type != TYPE_DOUBLE)) return create_symbol("Not a number");
+        (b->type != TYPE_INT && b->type != TYPE_DOUBLE)) return NIL;
 
     double x = (a->type == TYPE_DOUBLE) ? a->value.dbl : a->value.integer;
     double y = (b->type == TYPE_DOUBLE) ? b->value.dbl : b->value.integer;
@@ -465,7 +464,7 @@ sExpr* lt(sExpr *a, sExpr *b) {
 
 sExpr* gt(sExpr *a, sExpr *b) {
     if ((a->type != TYPE_INT && a->type != TYPE_DOUBLE) ||
-        (b->type != TYPE_INT && b->type != TYPE_DOUBLE)) return create_symbol("Not a number");
+        (b->type != TYPE_INT && b->type != TYPE_DOUBLE)) return NIL;
 
     double x = (a->type == TYPE_DOUBLE) ? a->value.dbl : a->value.integer;
     double y = (b->type == TYPE_DOUBLE) ? b->value.dbl : b->value.integer;
@@ -474,7 +473,7 @@ sExpr* gt(sExpr *a, sExpr *b) {
 
 sExpr* lte(sExpr *a, sExpr *b) {
     if ((a->type != TYPE_INT && a->type != TYPE_DOUBLE) ||
-        (b->type != TYPE_INT && b->type != TYPE_DOUBLE)) return create_symbol("Not a number");
+        (b->type != TYPE_INT && b->type != TYPE_DOUBLE)) return NIL;
 
     double x = (a->type == TYPE_DOUBLE) ? a->value.dbl : a->value.integer;
     double y = (b->type == TYPE_DOUBLE) ? b->value.dbl : b->value.integer;
@@ -483,7 +482,7 @@ sExpr* lte(sExpr *a, sExpr *b) {
 
 sExpr* gte(sExpr *a, sExpr *b) {
     if ((a->type != TYPE_INT && a->type != TYPE_DOUBLE) ||
-        (b->type != TYPE_INT && b->type != TYPE_DOUBLE)) return create_symbol("Not a number");
+        (b->type != TYPE_INT && b->type != TYPE_DOUBLE)) return NIL;
 
     double x = (a->type == TYPE_DOUBLE) ? a->value.dbl : a->value.integer;
     double y = (b->type == TYPE_DOUBLE) ? b->value.dbl : b->value.integer;
@@ -491,18 +490,23 @@ sExpr* gte(sExpr *a, sExpr *b) {
 }
 
 sExpr* eq(sExpr *a, sExpr *b) {
+    if ((a->type == TYPE_INT || a->type == TYPE_DOUBLE) &&
+        (b->type == TYPE_INT || b->type == TYPE_DOUBLE)) {
+        double x = (a->type == TYPE_DOUBLE) ? a->value.dbl : a->value.integer;
+        double y = (b->type == TYPE_DOUBLE) ? b->value.dbl : b->value.integer;
+        return (x == y) ? TRUE : NIL;
+    }
+
     if (a->type != b->type) return NIL;
 
     switch (a->type) {
-        case TYPE_INT:    return (a->value.integer == b->value.integer) ? TRUE : NIL;
-        case TYPE_DOUBLE: return (a->value.dbl == b->value.dbl) ? TRUE : NIL;
         case TYPE_STRING: return (strcmp(a->value.string, b->value.string) == 0) ? TRUE : NIL;
         case TYPE_SYMBOL: return (strcmp(a->value.symbol, b->value.symbol) == 0) ? TRUE : NIL;
         case TYPE_NIL:    return TRUE;
-        default:        return NIL;
+        default:          return NIL;
     }
-    return NIL;
 }
+
 
 sExpr* not_sExpr(sExpr *a) {
     return (a == NIL) ? TRUE : NIL;
@@ -520,7 +524,7 @@ sExpr* eval(sExpr *expr) {
         if(!issymbol(val) || strcmp(val->value.symbol, "undefined") != 0){
             return val;
         }
-        return NIL;
+        return expr;
     }
 
     sExpr *fn = car(expr);
@@ -564,16 +568,23 @@ sExpr* eval(sExpr *expr) {
         if (strcmp(sym, "=") == 0) return eq(eval(car(args)), eval(car(cdr(args))));
         if (strcmp(sym, "not") == 0) return not_sExpr(eval(car(args)));
         if (strcmp(sym, "and") == 0) {
-            sExpr* a = car(args);
-            sExpr* b = car(cdr(args));
-            if (isnil(eval(a))) return NIL;
-            return eval(b);
+            sExpr* cur = args;
+            sExpr* result = NIL;
+            while (!isnil(cur)) {
+                result = eval(car(cur));
+                if (!sExpr_to_bool(result)) return NIL;  // short-circuit
+                cur = cdr(cur);
+            }
+            return result;  // last evaluated value
         }
         if (strcmp(sym, "or") == 0) {
-            sExpr* a = car(args);
-            sExpr* b = car(cdr(args));
-            if (!isnil(eval(a))) return TRUE;
-            return eval(b);
+            sExpr* cur = args;
+            while (!isnil(cur)) {
+                sExpr* result = eval(car(cur));
+                if (!isnil(result)) return TRUE;  // short-circuit
+                cur = cdr(cur);
+            }
+            return NIL;  // all false
         }
         if (strcmp(sym, "if") == 0) {
             sExpr* cond = car(args);

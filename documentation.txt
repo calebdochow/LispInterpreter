@@ -1,5 +1,4 @@
 This implementation of an S-Expression parser and evaluator has a few known limitations and design choices that may differ from standard Lisp implementations. 
-Currently, the parser expects properly balanced parentheses and some variants will cause a seg fault :(
 Quoting is supported only for simple single-quote syntax (e.g., '(a b c))
 Some design choices were made to simplify memory management and type handling. There are cases of memory leakage
 Arithmetic functions return NIL for invalid operations rather than raising errors, and the equality comparison for lists performs a comparison rather than pointer equality. 

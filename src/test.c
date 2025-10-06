@@ -311,6 +311,89 @@ void test_parser() {
     }
 }
 
+// --- ENVIRONMENT / VARIABLE TESTS ---
+void test_define_and_set() {
+    printf("\n=== Define & Set! ===\n");
+
+    sExpr *x_sym = create_symbol("x");
+    sExpr *val5 = create_int(5);
+    sExpr *val10 = create_int(10);
+
+    // define x = 5 via eval
+    sExpr *def_expr = cons(create_symbol("define"), cons(x_sym, cons(val5, NIL)));
+    eval(def_expr);
+    assert_sExpr_equal(val5, lookup(x_sym), "define x = 5");
+
+    // set! x = 10 via eval
+    sExpr *set_expr = cons(create_symbol("set"), cons(x_sym, cons(val10, NIL)));
+    eval(set_expr);
+    assert_sExpr_equal(val10, lookup(x_sym), "set! x = 10");
+
+    free_sExpr(x_sym); free_sExpr(val5); free_sExpr(val10);
+}
+
+// --- CONDITIONALS ---
+void test_if() {
+    printf("\n=== IF ===\n");
+
+    sExpr *cond_true = create_int(1);
+    sExpr *cond_false = NIL;
+    sExpr *then_val = create_int(42);
+    sExpr *else_val = create_int(99);
+
+    // if TRUE then 42 else 99
+    sExpr *if_expr_true = cons(create_symbol("if"), cons(cond_true, cons(then_val, cons(else_val, NIL))));
+    assert_sExpr_equal(then_val, eval(if_expr_true), "if TRUE -> then");
+
+    // if NIL then 42 else 99
+    sExpr *if_expr_false = cons(create_symbol("if"), cons(cond_false, cons(then_val, cons(else_val, NIL))));
+    assert_sExpr_equal(else_val, eval(if_expr_false), "if NIL -> else");
+
+    free_sExpr(cond_true); free_sExpr(cond_false); free_sExpr(then_val); free_sExpr(else_val);
+}
+
+void test_cond() {
+    printf("\n=== COND ===\n");
+
+    sExpr *c1_test = NIL;  // false
+    sExpr *c2_test = TRUE;  // true
+    sExpr *c1_val = create_int(10);
+    sExpr *c2_val = create_int(20);
+
+    sExpr *cond1 = cons(c1_test, cons(c1_val, NIL));
+    sExpr *cond2 = cons(c2_test, cons(c2_val, NIL));
+    sExpr *cond_expr = cons(create_symbol("cond"), cons(cond1, cons(cond2, NIL)));
+
+    sExpr *res = eval(cond_expr);
+    assert_sExpr_equal(c2_val, res, "cond -> first true clause");
+
+    free_sExpr(c1_test); free_sExpr(c2_test); free_sExpr(c1_val); free_sExpr(c2_val);
+}
+
+// --- LOGICAL OPERATORS ---
+void test_or_and() {
+    printf("\n=== OR & AND ===\n");
+
+    // OR tests
+    sExpr *or_expr1 = cons(create_symbol("or"), cons(TRUE, cons(NIL, NIL)));
+    assert_sExpr_equal(TRUE, eval(or_expr1), "or(TRUE, NIL) -> TRUE");
+
+    sExpr *or_expr2 = cons(create_symbol("or"), cons(NIL, cons(create_int(0), NIL)));
+    assert_sExpr_equal(TRUE, eval(or_expr2), "or(NIL, 0) -> TRUE");
+
+    sExpr *or_expr3 = cons(create_symbol("or"), cons(NIL, cons(NIL, NIL)));
+    assert_sExpr_equal(NIL, eval(or_expr3), "or(NIL, NIL) -> NIL");
+
+    // AND tests
+    sExpr *and_expr1 = cons(create_symbol("and"), cons(TRUE, cons(NIL, NIL)));
+    assert_sExpr_equal(NIL, eval(and_expr1), "and(TRUE, NIL) -> NIL");
+
+    sExpr *and_expr2 = cons(create_symbol("and"), cons(TRUE, cons(create_int(1), NIL)));
+    assert_sExpr_equal(create_int(1), eval(and_expr2), "and(TRUE, 1) -> 1");
+
+    sExpr *and_expr3 = cons(create_symbol("and"), cons(NIL, cons(create_int(1), NIL)));
+    assert_sExpr_equal(NIL, eval(and_expr3), "and(NIL, 1) -> NIL");
+}
 
 int main() {
     // Initialize singletons
@@ -329,6 +412,11 @@ int main() {
     test_comparisons();
     test_singletons();
     test_parser();
+    test_define_and_set();
+    test_if();
+    test_cond();
+    test_or_and();
+
 
     printf("\n=== Summary ===\n");
     printf("Passed: %d\n", tests_passed);
