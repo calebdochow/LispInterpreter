@@ -239,7 +239,7 @@ TokenStream tokenize(const char* input){
     while(*p){
 
         //Skips Whitespace
-        if(isspace(*p)) {p++; continue;}
+        if (isspace((unsigned char)*p)) { p++; continue; }
 
         if (ts.count >= capacity){
             capacity *= 2;
@@ -276,7 +276,7 @@ TokenStream tokenize(const char* input){
             size_t i = 0;
             char *buf = malloc(bufsize);
 
-            while(*p && !isspace(*p) && *p != '(' && *p != ')'){
+            while (*p && !isspace((unsigned char)*p) && *p != '(' && *p != ')') {
                 if (i+1 >= bufsize){
                     bufsize *= 2;
                     buf = realloc(buf, bufsize);

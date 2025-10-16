@@ -13,8 +13,9 @@ int main(int argc, char *argv[]) {
     NIL = malloc(sizeof(sExpr));
     NIL->type = TYPE_NIL;
 
-    TRUE = create_symbol("t");
-    set(TRUE, TRUE);
+    TRUE = malloc(sizeof(sExpr));
+    TRUE->type = TYPE_SYMBOL;
+    TRUE->value.symbol = strdup("t");
 
     global_env = create_env();
 
